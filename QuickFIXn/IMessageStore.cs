@@ -2,10 +2,18 @@
 
 namespace QuickFix
 {
+    /// FIXME v2 - property-ize all of these get/set functions
+
+    /// <summary>
+    /// (Renamed per naming convention.)
+    /// </summary>
+    [System.Obsolete("Use IMessageStore instead.")]
+    public interface MessageStore : IMessageStore { }
+
     /// <summary>
     /// Used by a Session to store and retrieve messages for resend purposes
     /// </summary>
-    public interface MessageStore
+    public interface IMessageStore
     {
         /// <summary>
         /// Get messages within sequence number range (inclusive). Used for
@@ -31,10 +39,10 @@ namespace QuickFix
         void IncrNextSenderMsgSeqNum();
         void IncrNextTargetMsgSeqNum();
 
-        /// <summary>
-        /// Get the session creation time
-        /// </summary>
-        /// <returns>the session creation time</returns>
+
+        System.DateTime? CreationTime { get; }
+
+        [System.Obsolete("use CreationTime instead")]
         System.DateTime GetCreationTime();
 
         /// <summary>

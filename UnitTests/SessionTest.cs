@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace UnitTests
 {
-    class MockResponder : QuickFix.Responder
+    class MockResponder : QuickFix.IResponder
     {
 
         #region Responder Members
@@ -55,7 +55,7 @@ namespace UnitTests
         #endregion
     }
 
-    class MockApplication : QuickFix.Application
+    class MockApplication : QuickFix.IApplication
     {
         public System.Exception fromAppException = null;
         public System.Exception fromAdminException = null;
@@ -555,6 +555,22 @@ namespace UnitTests
         public void TestGettingIsAcceptor()
         {
             Assert.That(session2.IsAcceptor, Is.EqualTo(false));
+        }
+
+        [Test]
+        public void TestMessageStoreAccessor()
+        {
+            List<string> messages = new List<string>();
+
+            messages.Clear();
+            session.MessageStore.Get(0, 100, messages);
+            Assert.That(messages.Count, Is.EqualTo(0));
+
+            Logon();
+
+            messages.Clear();
+            session.MessageStore.Get(0, 100, messages);
+            Assert.That(messages.Count, Is.EqualTo(1)); // logon response
         }
     }
 }

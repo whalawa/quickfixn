@@ -174,27 +174,36 @@ namespace QuickFix
     /// </summary>
     public abstract class TagException : QuickFIXException
     {
-        public int field;
+        protected int _field;
+
+        public int Field { get { return _field; } }
         public FixValues.SessionRejectReason sessionRejectReason;
+
+        [System.Obsolete("For getter, use 'Field' instead.  The setter should not be used at all.")]
+        public int field
+        {
+            get { return _field; }
+            set { _field = value; }
+        }
 
         public TagException(string msg, int field)
             : base(msg)
         {
-            this.field = field;
+            this._field = field;
             this.sessionRejectReason = new QuickFix.FixValues.SessionRejectReason(FixValues.SessionRejectReason.OTHER.Value, msg);
         }
 
         public TagException(int field, FixValues.SessionRejectReason reason)
             : base(reason.Description)
         {
-            this.field = field;
+            this._field = field;
             this.sessionRejectReason = reason;
         }
 
         public TagException(int field, FixValues.SessionRejectReason reason, System.Exception innerException)
             : base(reason.Description, innerException)
         {
-            this.field = field;
+            this._field = field;
             this.sessionRejectReason = reason;
         }
     }
@@ -270,12 +279,28 @@ namespace QuickFix
 
     }
 
-
     public class RepeatingGroupCountMismatch : TagException
     {
         public RepeatingGroupCountMismatch(int tag)
             :base(tag, FixValues.SessionRejectReason.INCORRECT_NUM_IN_GROUP_COUNT_FOR_REPEATING_GROUP)
         {}
+    }
+
+    public class OtherTagException : TagException
+    {
+        public OtherTagException(string msg, int tag)
+            : base(msg, tag)
+        { }
+    }
+
+    /// <summary>
+    /// For when a received message has a group that doesn't start its entries with the delimiter tag
+    /// </summary>
+    public class GroupDelimiterTagException : OtherTagException
+    {
+        public GroupDelimiterTagException(int counterTag, int delimiterTag)
+            : base(string.Format("Group {0}'s first entry does not start with delimiter {1}", counterTag,delimiterTag), counterTag)
+        { }
     }
 
     #endregion

@@ -1,17 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace QuickFix
 {
     /// <summary>
     /// In-memory message store implementation
     /// </summary>
-    public class MemoryStore : MessageStore
+    public class MemoryStore : IMessageStore
     {
         #region Private Members
 
         System.Collections.Generic.Dictionary<int, string> messages_;
         int nextSenderMsgSeqNum_;
         int nextTargetMsgSeqNum_;
+        DateTime? creationTime;
 
         #endregion
 
@@ -39,7 +41,7 @@ namespace QuickFix
         }
 
         public int GetNextSenderMsgSeqNum()
-        { return nextSenderMsgSeqNum_;  }
+        { return nextSenderMsgSeqNum_; }
 
         public int GetNextTargetMsgSeqNum()
         { return nextTargetMsgSeqNum_; }
@@ -51,21 +53,30 @@ namespace QuickFix
         { nextTargetMsgSeqNum_ = value; }
 
         public void IncrNextSenderMsgSeqNum()
-        { ++nextSenderMsgSeqNum_;  }
+        { ++nextSenderMsgSeqNum_; }
 
         public void IncrNextTargetMsgSeqNum()
         { ++nextTargetMsgSeqNum_; }
 
-        public System.DateTime GetCreationTime()
+        public System.DateTime? CreationTime
         {
-            throw new System.NotImplementedException();
+            get { return creationTime; }
+            internal set { creationTime = value; }
         }
+
+        [System.Obsolete("Use CreationTime instead")]
+        public DateTime GetCreationTime()
+        {
+            throw new NotImplementedException();
+        }
+
 
         public void Reset()
         {
             nextSenderMsgSeqNum_ = 1;
             nextTargetMsgSeqNum_ = 1;
             messages_.Clear();
+            creationTime = DateTime.UtcNow;
         }
 
         public void Refresh()

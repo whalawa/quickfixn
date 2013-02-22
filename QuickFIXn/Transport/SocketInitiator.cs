@@ -36,10 +36,10 @@ namespace QuickFix.Transport
 
         #region Private Members
         
-        private Application app_;
+        private IApplication app_;
         private SessionSettings settings_;
-        private MessageStoreFactory storeFactory_;
-        private LogFactory logFactory_;
+        private IMessageStoreFactory storeFactory_;
+        private ILogFactory logFactory_;
         private Socket socket_ = null;
         private byte[] _readBuffer = new byte[512];
         private volatile bool shutdownRequested_ = false;
@@ -52,12 +52,21 @@ namespace QuickFix.Transport
         
         #endregion
 
-        public SocketInitiator(Application application, MessageStoreFactory storeFactory, SessionSettings settings)
+        public SocketInitiator(IApplication application, IMessageStoreFactory storeFactory, SessionSettings settings)
             : this(application, storeFactory, settings, null)
         { }
 
-        public SocketInitiator(Application application, MessageStoreFactory storeFactory, SessionSettings settings, LogFactory logFactory)
+        public SocketInitiator(IApplication application, IMessageStoreFactory storeFactory, SessionSettings settings, ILogFactory logFactory)
             : base(application, storeFactory, settings, logFactory)
+        {
+            app_ = application;
+            storeFactory_ = storeFactory;
+            settings_ = settings;
+            logFactory_ = logFactory;
+        }
+
+        public SocketInitiator(IApplication application, IMessageStoreFactory storeFactory, SessionSettings settings, ILogFactory logFactory, IMessageFactory messageFactory)
+            : base(application, storeFactory, settings, logFactory, messageFactory)
         {
             app_ = application;
             storeFactory_ = storeFactory;

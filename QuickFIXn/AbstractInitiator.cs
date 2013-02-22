@@ -24,11 +24,15 @@ namespace QuickFix
 
         #endregion
 
-        public AbstractInitiator(Application application, MessageStoreFactory storeFactory, SessionSettings settings)
-            : this(application, storeFactory, settings, null)
+        public AbstractInitiator(IApplication app, IMessageStoreFactory storeFactory, SessionSettings settings)
+            : this(app, storeFactory, settings, null, null)
         { }
 
-        public AbstractInitiator(Application app, MessageStoreFactory storeFactory, SessionSettings settings, LogFactory logFactory)
+        public AbstractInitiator(IApplication app, IMessageStoreFactory storeFactory, SessionSettings settings, ILogFactory logFactory)
+            : this(app, storeFactory, settings, logFactory, null)
+        { }
+
+        public AbstractInitiator(IApplication app, IMessageStoreFactory storeFactory, SessionSettings settings, ILogFactory logFactory, IMessageFactory messageFactory)
         {
             settings_ = settings;
 
@@ -36,7 +40,7 @@ namespace QuickFix
             if (0 == definedSessions.Count)
                 throw new ConfigError("No sessions defined");
 
-            SessionFactory factory = new SessionFactory(app, storeFactory, logFactory);
+            SessionFactory factory = new SessionFactory(app, storeFactory, logFactory, messageFactory);
             foreach (SessionID sessionID in definedSessions)
             {
                 Dictionary dict = settings.Get(sessionID);
@@ -174,8 +178,13 @@ namespace QuickFix
                 foreach(SessionID sessionID in disconnectedSessions)
                 {
                     Session session = Session.LookupSession(sessionID);
-                    if(session.IsEnabled && session.IsSessionTime)
-                        DoConnect(sessionID, settings_.Get(sessionID));
+                    if (session.IsEnabled)
+                    {
+                        if (session.IsNewSession)
+                            session.Reset("New session");
+                        if (session.IsSessionTime)
+                            DoConnect(sessionID, settings_.Get(sessionID));
+                    }
                 }
             }
         }

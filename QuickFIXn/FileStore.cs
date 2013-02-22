@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using QuickFix.Util;
 
 namespace QuickFix
 {
     /// <summary>
     /// File store implementation
     /// </summary>
-    public class FileStore : MessageStore, IDisposable
+    public class FileStore : IMessageStore, IDisposable
     {
         private class MsgDef
         {
             public long index { get; private set; }
             public int size { get; private set; }
-            
+
             public MsgDef(long index, int size)
             {
                 this.index = index;
@@ -25,24 +25,23 @@ namespace QuickFix
         private string seqNumsFileName_;
         private string msgFileName_;
         private string headerFileName_;
+        private string sessionFileName_;
 
         private System.IO.FileStream seqNumsFile_;
         private System.IO.FileStream msgFile_;
-
         private System.IO.StreamWriter headerFile_;
 
         private MemoryStore cache_ = new MemoryStore();
 
-        System.Collections.Generic.Dictionary<int, MsgDef> offsets_ = 
-            new Dictionary<int, MsgDef>();
+        System.Collections.Generic.Dictionary<int, MsgDef> offsets_ = new Dictionary<int, MsgDef>();
 
         public static string Prefix(SessionID sessionID)
         {
             System.Text.StringBuilder prefix = new System.Text.StringBuilder(sessionID.BeginString)
                 .Append('-').Append(sessionID.SenderCompID);
-            if(SessionID.IsSet(sessionID.SenderSubID))
+            if (SessionID.IsSet(sessionID.SenderSubID))
                 prefix.Append('_').Append(sessionID.SenderSubID);
-            if(SessionID.IsSet(sessionID.SenderLocationID))
+            if (SessionID.IsSet(sessionID.SenderLocationID))
                 prefix.Append('_').Append(sessionID.SenderLocationID);
             prefix.Append('-').Append(sessionID.TargetCompID);
             if (SessionID.IsSet(sessionID.TargetSubID))
@@ -66,6 +65,7 @@ namespace QuickFix
             seqNumsFileName_ = System.IO.Path.Combine(path, prefix + ".seqnums");
             msgFileName_ = System.IO.Path.Combine(path, prefix + ".body");
             headerFileName_ = System.IO.Path.Combine(path, prefix + ".header");
+            sessionFileName_ = System.IO.Path.Combine(path, prefix + ".session");
 
             open();
         }
@@ -73,32 +73,43 @@ namespace QuickFix
         private void open()
         {
             ConstructFromFileCache();
+            InitializeSessionCreateTime();
 
             seqNumsFile_ = new System.IO.FileStream(seqNumsFileName_, System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.ReadWrite);
             msgFile_ = new System.IO.FileStream(msgFileName_, System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.ReadWrite);
             headerFile_ = new System.IO.StreamWriter(headerFileName_, true);
         }
 
+        private void PurgeSingleFile(System.IO.Stream stream, string filename)
+        {
+            if (stream != null)
+                stream.Close();
+            if (System.IO.File.Exists(filename))
+                System.IO.File.Delete(filename);
+        }
+
+        private void PurgeSingleFile(System.IO.StreamWriter stream, string filename)
+        {
+            if (stream != null)
+                stream.Close();
+            if (System.IO.File.Exists(filename))
+                System.IO.File.Delete(filename);
+        }
+
+        private void PurgeSingleFile(string filename)
+        {
+            if (System.IO.File.Exists(filename))
+                System.IO.File.Delete(filename);
+        }
+
         private void PurgeFileCache()
         {
-            if (seqNumsFile_ != null)
-                seqNumsFile_.Close();
-
-            if (msgFile_ != null)
-                msgFile_.Close();
-
-            if (headerFile_ != null)
-                headerFile_.Close();
-
-            if(System.IO.File.Exists(seqNumsFileName_))
-                System.IO.File.Delete(seqNumsFileName_);
-
-            if(System.IO.File.Exists(headerFileName_))
-                System.IO.File.Delete(headerFileName_);
-
-            if(System.IO.File.Exists(msgFileName_))
-                System.IO.File.Delete(msgFileName_);
+            PurgeSingleFile(seqNumsFile_, seqNumsFileName_);
+            PurgeSingleFile(msgFile_, msgFileName_);
+            PurgeSingleFile(headerFile_, headerFileName_);
+            PurgeSingleFile(sessionFileName_);
         }
+
 
         private void ConstructFromFileCache()
         {
@@ -120,7 +131,7 @@ namespace QuickFix
                 }
             }
 
-            if(System.IO.File.Exists(seqNumsFileName_))
+            if (System.IO.File.Exists(seqNumsFileName_))
             {
                 using (System.IO.StreamReader seqNumReader = new System.IO.StreamReader(seqNumsFileName_))
                 {
@@ -134,16 +145,39 @@ namespace QuickFix
             }
         }
 
-
+        private void InitializeSessionCreateTime()
+        {
+            if (System.IO.File.Exists(sessionFileName_) && new System.IO.FileInfo(sessionFileName_).Length > 0)
+            {
+                using (System.IO.StreamReader reader = new System.IO.StreamReader(sessionFileName_))
+                {
+                    string s = reader.ReadToEnd();
+                    cache_.CreationTime = UtcDateTimeSerializer.FromString(s);
+                }
+            }
+            else
+            {
+                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(sessionFileName_, false))
+                {
+                    writer.Write(UtcDateTimeSerializer.ToString(cache_.CreationTime.Value));
+                }
+            }
+        }
 
 
         #region MessageStore Members
 
+        /// <summary>
+        /// Get messages within the range of sequence numbers
+        /// </summary>
+        /// <param name="startSeqNum"></param>
+        /// <param name="endSeqNum"></param>
+        /// <param name="messages"></param>
         public void Get(int startSeqNum, int endSeqNum, List<string> messages)
         {
-            for(int i = startSeqNum; i<=endSeqNum; i++)
+            for (int i = startSeqNum; i <= endSeqNum; i++)
             {
-                if(offsets_.ContainsKey(i))
+                if (offsets_.ContainsKey(i))
                 {
                     msgFile_.Seek(offsets_[i].index, System.IO.SeekOrigin.Begin);
                     byte[] msgBytes = new byte[offsets_[i].size];
@@ -154,7 +188,13 @@ namespace QuickFix
             }
 
         }
-
+        
+        /// <summary>
+        /// Store a message
+        /// </summary>
+        /// <param name="msgSeqNum"></param>
+        /// <param name="msg"></param>
+        /// <returns></returns>
         public bool Set(int msgSeqNum, string msg)
         {
             msgFile_.Seek(0, System.IO.SeekOrigin.End);
@@ -168,7 +208,7 @@ namespace QuickFix
             headerFile_.WriteLine(b.ToString());
             headerFile_.Flush();
 
-            offsets_[msgSeqNum] = new MsgDef(offset,size);
+            offsets_[msgSeqNum] = new MsgDef(offset, size);
 
             msgFile_.Write(msgBytes, 0, size);
             msgFile_.Flush();
@@ -215,11 +255,20 @@ namespace QuickFix
         {
             seqNumsFile_.Seek(0, System.IO.SeekOrigin.Begin);
             System.IO.StreamWriter writer = new System.IO.StreamWriter(seqNumsFile_);
-            
+
             writer.Write(GetNextSenderMsgSeqNum().ToString("D10") + " : " + GetNextTargetMsgSeqNum().ToString("D10"));
             writer.Flush();
         }
 
+        public DateTime? CreationTime
+        {
+            get
+            {
+                return cache_.CreationTime;
+            }
+        }
+
+        [System.Obsolete("Use CreationTime instead")]
         public DateTime GetCreationTime()
         {
             throw new NotImplementedException();
