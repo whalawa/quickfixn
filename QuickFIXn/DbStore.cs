@@ -13,34 +13,34 @@ CREATE TABLE [dbo].[sessions](
 	[beginstring] [char](8) NOT NULL,
 	[sendercompid] [varchar](64) NOT NULL,
 	[targetcompid] [varchar](64) NOT NULL,
-	[session_qualifier] [varchar](64) NULL,
+	[session_qualifier] [varchar](64) NOT NULL,
 	[creation_time] [datetime] NOT NULL,
 	[sender_seqnum] [int] NOT NULL,
 	[target_seqnum] [int] NOT NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[beginstring] ASC,
-	[sendercompid] ASC,
-	[targetcompid] ASC,
-	[session_qualifier] ASC
-)
+    PRIMARY KEY CLUSTERED 
+    (
+	    [beginstring] ASC,
+	    [sendercompid] ASC,
+	    [targetcompid] ASC,
+	    [session_qualifier] ASC
+    )
 )
 
 CREATE TABLE [dbo].[messages](
 	[beginstring] [char](8) NOT NULL,
 	[sendercompid] [varchar](64) NOT NULL,
 	[targetcompid] [varchar](64) NOT NULL,
-	[session_qualifier] [varchar](64) NULL,
+	[session_qualifier] [varchar](64) NOT NULL,
 	[msgseqnum] [int] NOT NULL,
 	[message] [text] NOT NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[beginstring] ASC,
-	[sendercompid] ASC,
-	[targetcompid] ASC,
-	[session_qualifier] ASC,
-	[msgseqnum] ASC
-)
+    PRIMARY KEY CLUSTERED 
+    (
+	    [beginstring] ASC,
+	    [sendercompid] ASC,
+	    [targetcompid] ASC,
+	    [session_qualifier] ASC,
+	    [msgseqnum] ASC
+    )
 )
 
 */
@@ -80,7 +80,7 @@ FROM    messages
 WHERE   beginstring = @beginstring
         AND sendercompid = @sendercompid
         AND targetcompid = @targetcompid
-        AND ( ( NULLIF(session_qualifier,'') IS NULL AND NULLIF(@session_qualifier,'') IS NULL ) OR session_qualifier = @session_qualifier )
+        AND ( session_qualifier = '' AND @session_qualifier = '' ) OR session_qualifier = @session_qualifier )
         AND msgseqnum >= @startSeqNum AND msgseqnum <= @endSeqNum
 ORDER BY msgseqnum ASC"
                     : getMessageCommandText;
@@ -99,7 +99,7 @@ DELETE FROM messages
 WHERE   beginstring = @beginstring
         AND sendercompid = @sendercompid
         AND targetcompid = @targetcompid
-        AND ( ( NULLIF(session_qualifier,'') IS NULL AND NULLIF(@session_qualifier,'') IS NULL ) OR session_qualifier = @session_qualifier )"
+        AND ( ( session_qualifier = '' AND @session_qualifier = '' ) OR session_qualifier = @session_qualifier )"
                     : clearMessagesCommandText;
 
             this.createSessionCommandText =
@@ -117,7 +117,7 @@ FROM    sessions
 WHERE   beginstring = @beginstring
         AND sendercompid = @sendercompid
         AND targetcompid = @targetcompid
-        AND ( ( NULLIF(session_qualifier,'') IS NULL AND NULLIF(@session_qualifier,'') IS NULL ) OR session_qualifier = @session_qualifier )"
+        AND ( ( session_qualifier = '' AND @session_qualifier = '' ) OR session_qualifier = @session_qualifier )"
                     : getSessionCommandText;
 
             this.updateSessionCommandText =
@@ -130,7 +130,7 @@ SET     creation_time = @creation_time,
 WHERE   beginstring = @beginstring
         AND sendercompid = @sendercompid
         AND targetcompid = @targetcompid
-        AND ( ( NULLIF(session_qualifier,'') IS NULL AND NULLIF(@session_qualifier,'') IS NULL ) OR session_qualifier = @session_qualifier )"
+        AND ( ( session_qualifier = '' AND @session_qualifier = '' ) OR session_qualifier = @session_qualifier )"
                     : updateSessionCommandText;
         }
 
@@ -168,7 +168,7 @@ WHERE   beginstring = @beginstring
                     pSession_qualifier.ParameterName = "@session_qualifier";
                     pSession_qualifier.DbType = System.Data.DbType.AnsiString;
                     pSession_qualifier.Size = 64;
-                    pSession_qualifier.Value = this.sessionID.SessionQualifier;
+                    pSession_qualifier.Value = this.sessionID.SessionQualifier == null ? string.Empty : this.sessionID.SessionQualifier;
                     command.Parameters.Add(pSession_qualifier);
 
                     var pStartSeqNum = command.CreateParameter();
@@ -226,7 +226,7 @@ WHERE   beginstring = @beginstring
                     pSession_qualifier.ParameterName = "@session_qualifier";
                     pSession_qualifier.DbType = System.Data.DbType.AnsiString;
                     pSession_qualifier.Size = 64;
-                    pSession_qualifier.Value = this.sessionID.SessionQualifier;
+                    pSession_qualifier.Value = this.sessionID.SessionQualifier == null ? string.Empty : this.sessionID.SessionQualifier;
                     command.Parameters.Add(pSession_qualifier);
 
                     var pStartSeqNum = command.CreateParameter();
@@ -280,7 +280,7 @@ WHERE   beginstring = @beginstring
                 pSession_qualifier.ParameterName = "@session_qualifier";
                 pSession_qualifier.DbType = System.Data.DbType.AnsiString;
                 pSession_qualifier.Size = 64;
-                pSession_qualifier.Value = this.sessionID.SessionQualifier;
+                pSession_qualifier.Value = this.sessionID.SessionQualifier == null ? string.Empty : this.sessionID.SessionQualifier;
                 command.Parameters.Add(pSession_qualifier);
 
                 var rowCount = command.ExecuteNonQuery();
@@ -296,7 +296,7 @@ WHERE   beginstring = @beginstring
                 int? target_seqnum;
                 this.getSession(out creation_time, out sender_seqnum, out target_seqnum);
 
-                return sender_seqnum.Value;
+                return sender_seqnum.HasValue ? sender_seqnum.Value : 1;
             }
         }
 
@@ -383,12 +383,15 @@ WHERE   beginstring = @beginstring
         {
             get
             {
-                DateTime? creation_time;
-                int? sender_seqnum;
-                int? target_seqnum;
-                this.getSession(out creation_time, out sender_seqnum, out target_seqnum);
+                lock (this.sessionsLock)
+                {
+                    DateTime? creation_time;
+                    int? sender_seqnum;
+                    int? target_seqnum;
+                    this.getSession(out creation_time, out sender_seqnum, out target_seqnum);
 
-                return creation_time;
+                    return creation_time;
+                }
             }
         }
 
@@ -450,7 +453,7 @@ WHERE   beginstring = @beginstring
                 pSession_qualifier.ParameterName = "@session_qualifier";
                 pSession_qualifier.DbType = System.Data.DbType.AnsiString;
                 pSession_qualifier.Size = 64;
-                pSession_qualifier.Value = this.sessionID.SessionQualifier;
+                pSession_qualifier.Value = this.sessionID.SessionQualifier == null ? string.Empty : this.sessionID.SessionQualifier;
                 command.Parameters.Add(pSession_qualifier);
 
                 var dataReader = command.ExecuteReader();
@@ -499,7 +502,7 @@ WHERE   beginstring = @beginstring
                 pSession_qualifier.ParameterName = "@session_qualifier";
                 pSession_qualifier.DbType = System.Data.DbType.AnsiString;
                 pSession_qualifier.Size = 64;
-                pSession_qualifier.Value = this.sessionID.SessionQualifier;
+                pSession_qualifier.Value = this.sessionID.SessionQualifier == null ? string.Empty : this.sessionID.SessionQualifier;
                 command.Parameters.Add(pSession_qualifier);
 
                 var pCreation_time = command.CreateParameter();
@@ -549,7 +552,7 @@ WHERE   beginstring = @beginstring
                 pSession_qualifier.ParameterName = "@session_qualifier";
                 pSession_qualifier.DbType = System.Data.DbType.AnsiString;
                 pSession_qualifier.Size = 64;
-                pSession_qualifier.Value = this.sessionID.SessionQualifier;
+                pSession_qualifier.Value = this.sessionID.SessionQualifier == null ? string.Empty : this.sessionID.SessionQualifier;
                 command.Parameters.Add(pSession_qualifier);
 
                 var pCreation_time = command.CreateParameter();
