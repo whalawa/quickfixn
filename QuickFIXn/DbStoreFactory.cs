@@ -1,7 +1,7 @@
 ﻿
 namespace QuickFix
 {
-    public class DbStoreFactory : MessageStoreFactory
+    public class DbStoreFactory : IMessageStoreFactory
     {
         SessionSettings settings_;
 
@@ -10,7 +10,7 @@ namespace QuickFix
             settings_ = settings;
         }
 
-        public MessageStore Create(SessionID sessionID)
+        public IMessageStore Create(SessionID sessionID)
         {
             var settingsDict = settings_.Get(sessionID);
             return new DbStore(

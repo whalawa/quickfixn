@@ -45,7 +45,7 @@ PRIMARY KEY CLUSTERED
 
 */
 
-    public class DbStore : MessageStore
+    public class DbStore : IMessageStore
     {
         object messagesLock = new object();
         object sessionsLock = new object();
@@ -365,6 +365,7 @@ WHERE   beginstring = @beginstring
             }
         }
 
+        [Obsolete("Use CreationTime instead")]
         public DateTime GetCreationTime()
         {
             lock (this.sessionsLock)
@@ -375,6 +376,19 @@ WHERE   beginstring = @beginstring
                 this.getSession(out creation_time, out sender_seqnum, out target_seqnum);
 
                 return creation_time.Value;
+            }
+        }
+
+        public DateTime? CreationTime
+        {
+            get
+            {
+                DateTime? creation_time;
+                int? sender_seqnum;
+                int? target_seqnum;
+                this.getSession(out creation_time, out sender_seqnum, out target_seqnum);
+
+                return creation_time;
             }
         }
 
@@ -572,5 +586,6 @@ WHERE   beginstring = @beginstring
 
             return connection;
         }
+
     }
 }

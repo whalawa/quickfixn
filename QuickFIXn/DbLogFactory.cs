@@ -1,7 +1,7 @@
 ﻿
 namespace QuickFix
 {
-    public class DbLogFactory : LogFactory
+    public class DbLogFactory : ILogFactory
     {
         SessionSettings settings_;
 
@@ -10,7 +10,7 @@ namespace QuickFix
             settings_ = settings;
         }
 
-        public Log Create(SessionID sessionID)
+        public ILog Create(SessionID sessionID)
         {
             var settingsDict = settings_.Get(sessionID);
             return new DbLog(
