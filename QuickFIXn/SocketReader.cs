@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using Common.Logging;
 
 namespace QuickFix
 {
@@ -13,6 +14,7 @@ namespace QuickFix
         private Session qfSession_ = null;
         private TcpClient tcpClient_;
         private ClientHandlerThread responder_;
+        private static readonly Common.Logging.ILog log_ = LogManager.GetCurrentClassLogger();
 
         public SocketReader(TcpClient tcpClient, ClientHandlerThread responder)
         {
@@ -144,15 +146,15 @@ namespace QuickFix
 	    {
 		    if(qfSession_.HasResponder)
 		    {
-                qfSession_.Log.OnIncoming(msg);
-                qfSession_.Log.OnEvent("Multiple logons/connections for this session are not allowed (" + tcpClient_.Client.RemoteEndPoint + ")");
+                qfSession_.MessageLog.OnIncoming(msg);
+                log_.ErrorFormat("Multiple logons/connections for this session ({0}) are not allowed ({1})", qfSession_.SessionID, tcpClient_.Client.RemoteEndPoint);
 			    qfSession_ = null;
                 DisconnectClient();
 			    return false;
 		    }
-		    qfSession_.Log.OnEvent(qfSession_.SessionID + " Socket Reader " + GetHashCode() + " accepting session " + qfSession_.SessionID + " from " + tcpClient_.Client.RemoteEndPoint);
+            log_.InfoFormat("{0} Socket Reader {1} accepting session {2} from {3}", qfSession_.SessionID, GetHashCode(), qfSession_.SessionID, tcpClient_.Client.RemoteEndPoint);
             /// FIXME do this here? qfSession_.HeartBtInt = QuickFix.Fields.Converters.IntConverter.Convert(message.GetField(Fields.Tags.HeartBtInt)); /// FIXME
-		    qfSession_.Log.OnEvent(qfSession_.SessionID +" Acceptor heartbeat set to " + qfSession_.HeartBtInt + " seconds");
+            log_.InfoFormat("{0} Acceptor heartbeat set to {1} seconds", qfSession_.SessionID, qfSession_.HeartBtInt);
 		    qfSession_.SetResponder(responder_);
 		    return true;
 	    }

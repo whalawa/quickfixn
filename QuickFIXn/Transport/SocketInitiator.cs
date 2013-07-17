@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Net.Sockets;
+using Common.Logging;
 using QuickFix.Config;
 using System.Net;
 using System.Diagnostics;
@@ -44,7 +45,8 @@ namespace QuickFix.Transport
         private Dictionary<SessionID, SocketInitiatorThread> threads_ = new Dictionary<SessionID, SocketInitiatorThread>();
         private Dictionary<SessionID, int> sessionToHostNum_ = new Dictionary<SessionID, int>();
         private object sync_ = new object();
-        
+        private static readonly Common.Logging.ILog log_ = LogManager.GetCurrentClassLogger();
+
         #endregion
 
         public SocketInitiator(IApplication application, IMessageStoreFactory storeFactory, SessionSettings settings)
@@ -66,7 +68,7 @@ namespace QuickFix.Transport
             {
                 t.Connect();
                 t.Initiator.SetConnected(t.Session.SessionID);
-                t.Session.Log.OnEvent("Connection succeeded");
+                log_.Info(t.Session.SessionID + " Connection succeeded for session ");
                 t.Session.Next();
                 while (t.Read())
                 { }
@@ -76,7 +78,7 @@ namespace QuickFix.Transport
             }
             catch (SocketException e)
             {
-                t.Session.Log.OnEvent("Connection failed: " + e.Message);
+                log_.Info(t.Session.SessionID + "Connection failed for session ");
                 t.Initiator.RemoveThread(t);
                 t.Initiator.SetDisconnected(t.Session.SessionID);
             }
@@ -190,7 +192,7 @@ namespace QuickFix.Transport
 
                 IPEndPoint socketEndPoint = GetNextSocketEndPoint(sessionID, settings);
                 SetPending(sessionID);
-                session.Log.OnEvent("Connecting to " + socketEndPoint.Address + " on port " + socketEndPoint.Port);
+                log_.InfoFormat("{0} Connecting to {1} on port {2}", session.SessionID, socketEndPoint.Address, socketEndPoint.Port);
 
                 SocketInitiatorThread t = new SocketInitiatorThread(this, session, socketEndPoint, socketSettings_);
                 t.Start();
@@ -200,7 +202,7 @@ namespace QuickFix.Transport
             catch (System.Exception e)
             {
                 if (null != session)
-                    session.Log.OnEvent(e.Message);
+                    log_.Error("Error while connecting", e);
             }
         }
 

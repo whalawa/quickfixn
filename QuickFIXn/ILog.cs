@@ -29,11 +29,5 @@ namespace QuickFix
         /// </summary>
         /// <param name="msg">a raw FIX message</param>
         void OnOutgoing(string msg);
-
-        /// <summary>
-        /// Logs a session event
-        /// </summary>
-        /// <param name="s">event description</param>
-        void OnEvent(string s);
     }
 }

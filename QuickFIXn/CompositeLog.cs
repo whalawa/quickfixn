@@ -36,13 +36,6 @@ namespace QuickFix
                 log.OnOutgoing(msg);
         }
 
-        public void OnEvent(string s)
-        {
-            DisposedCheck();
-            foreach (var log in logs_)
-                log.OnEvent(s);
-        }
-
         public void Dispose()
         {
             _disposed = true;
