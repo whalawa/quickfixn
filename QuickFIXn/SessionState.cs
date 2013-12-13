@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Common.Logging;
 
 namespace QuickFix
 {
@@ -31,7 +32,8 @@ namespace QuickFix
         private ResendRange resendRange_ = new ResendRange();
         private Dictionary<int, Message> msgQueue = new Dictionary<int, Message>();
 
-        private ILog log_;
+        private readonly Common.Logging.ILog log_;
+        private ILog messageLog_;
 
         #endregion
 
@@ -46,8 +48,8 @@ namespace QuickFix
         public bool ShouldSendLogon
         { get { return IsInitiator && !SentLogon; } }
 
-        public ILog Log
-        { get { return log_; } }
+        public ILog MessageLog
+        { get { return messageLog_; } }
 
         #endregion
 
@@ -155,9 +157,10 @@ namespace QuickFix
 
         #endregion
 
-        public SessionState(ILog log, int heartBtInt)
+        public SessionState(SessionID sessID, ILog messageLog, int heartBtInt)
         {
-            log_ = log;
+            log_ = LogManager.GetLogger(String.Format("QuickFix.Sessions.{0}.SessionState", sessID));
+            messageLog_ = messageLog;
             this.HeartBtInt = heartBtInt;
             this.IsInitiator = (0 != heartBtInt);
             lastReceivedTimeDT_ = DateTime.UtcNow;
@@ -398,7 +401,7 @@ namespace QuickFix
             lock (sync_)
             {
                 this.MessageStore.Reset();
-                this.Log.OnEvent("Session reset: " + reason);
+                log_.Info("Session reset: " + reason);
             }
         }
 
@@ -411,7 +414,7 @@ namespace QuickFix
 
         public void Dispose()
         {
-            if (log_ != null) { log_.Dispose(); }
+            if (messageLog_ != null) { messageLog_.Dispose(); }
             if (MessageStore != null) { MessageStore.Dispose(); }
         }
     }
