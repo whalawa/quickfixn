@@ -17,5 +17,6 @@ Changes since the last version:
 -------------------------------
 * (major/minor/patch) desc of fixed issue (contributor)
 
-* (minor) #247 - support for CheckLatency/MaxLatency config settings (#247)
+* (minor) #247 - support for CheckLatency/MaxLatency config settings (ruaanviljoen)
+* (minor) #112 - DbLog and DbStore (ligu)
 
