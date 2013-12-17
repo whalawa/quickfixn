@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 
 namespace QuickFix
@@ -71,6 +71,17 @@ namespace QuickFix
         public const string SSL_CERTIFICATE_PASSWORD = "SSLCertificatePassword";
         public const string SSL_REQUIRE_CLIENT_CERTIFICATE = "SSLRequireClientCertificate";
         public const string SSL_CA_CERTIFICATE = "SSLCACertificate";
+
+        public const string DB_LOG_CONNECTION = "DbLogConnection";
+        public const string DB_LOG_MESSAGE_COMMANDTEXT = "DbLogMessageCommandText";
+        public const string DB_LOG_EVENT_COMMANDTEXT = "DbLogEventCommandText";
+        public const string DB_STORE_CONNECTION = "DbStoreConnection";
+        public const string DB_STORE_GETMESSAGE_COMMANDTEXT = "DbStoreGetMessageCommandText";
+        public const string DB_STORE_SETMESSAGE_COMMANDTEXT = "DbStoreSetMessageCommandText";
+        public const string DB_STORE_CLEARMESSAGES_COMMANDTEXT = "DbStoreClearMessagesCommandText";
+        public const string DB_STORE_CREATESESSION_COMMANDTEXT = "DbStoreCreateSessionCommandText";
+        public const string DB_STORE_GETSESSION_COMMANDTEXT = "DbStoreGetSessionCommandText";
+        public const string DB_STORE_UPDATESESSION_COMMANDTEXT = "DbStoreUpdateSessionCommandText";
 
         #endregion
 
