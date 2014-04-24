@@ -78,6 +78,7 @@
     <Compile Include="IMessageStore.cs" />
     <Compile Include="IMessageStoreFactory.cs" />
     <Compile Include="IResponder.cs" />
+    <Compile Include="LogDispatcher.cs" />
     <Compile Include="MemoryStore.cs" />
     <Compile Include="MemoryStoreFactory.cs" />
     <Compile Include="MessageCracker.cs" />

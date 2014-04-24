@@ -24,11 +24,15 @@ namespace QuickFix
         private SessionState state_;
         private IMessageFactory msgFactory_;
         private static readonly HashSet<string> AdminMsgTypes = new HashSet<string>() { "0", "A", "1", "2", "3", "4", "5" };
-        private readonly Common.Logging.ILog log_;
+        private readonly LogDispatcher log_;
 
         #endregion
 
         #region Properties
+
+        internal LogDispatcher NewLog { get { return log_; } }
+        internal LogDispatcher IncomingMsgLog { get; private set; }
+        internal LogDispatcher OutgoingMsgLog { get; private set; }
 
         // state
         public IMessageStore MessageStore { get { return state_.MessageStore; } }
@@ -222,15 +226,16 @@ namespace QuickFix
             else
                 this.ApplicationDataDictionary = this.SessionDataDictionary;
 
-            log_ = LogManager.GetLogger("QuickFix.Sessions." + sessID);
+            var legacyLog = logFactory == null ? new NullLog() : logFactory.Create(sessID);
 
-            ILog messageLog;
-            if (null != logFactory)
-                messageLog = logFactory.Create(sessID);
-            else
-                messageLog = new NullLog();
+            log_ =
+                new LogDispatcher(LogManager.GetLogger(String.Format("QuickFix.Sessions.{0}", sessID)), legacyLog);
+            IncomingMsgLog =
+                new LogDispatcher(LogManager.GetLogger(String.Format("QuickFix.Sessions.{0}.Incoming", sessID)), legacyLog);
+            OutgoingMsgLog =
+                new LogDispatcher(LogManager.GetLogger(String.Format("QuickFix.Sessions.{0}.Outgoing", sessID)), legacyLog);
 
-            state_ = new SessionState(sessID, messageLog, heartBtInt)
+            state_ = new SessionState(sessID, legacyLog, heartBtInt)
             {
                 MessageStore = storeFactory.Create(sessID)
             };
@@ -344,7 +349,7 @@ namespace QuickFix
             {
                 if (null == responder_)
                     return false;
-                this.MessageLog.OnOutgoing(message);
+                OutgoingMsgLog.OnOutgoingMessage(message);
                 return responder_.Send(message);
             }
         }
@@ -506,7 +511,7 @@ namespace QuickFix
         {
             try
             {
-                this.MessageLog.OnIncoming(msgStr);
+                IncomingMsgLog.OnIncomingMessage(msgStr);
 
                 MsgType msgType = Message.IdentifyType(msgStr);
                 string beginString = Message.ExtractBeginString(msgStr);

@@ -221,7 +221,7 @@ namespace QuickFix
         {
             if(qfSession_.HasResponder)
             {
-                qfSession_.MessageLog.OnIncoming(msg);
+                qfSession_.IncomingMsgLog.OnIncomingMessage(msg);
                 log_.ErrorFormat("Multiple logons/connections for this session ({0}) are not allowed ({1})", qfSession_.SessionID, tcpClient_.Client.RemoteEndPoint);
                 qfSession_ = null;
                 DisconnectClient();

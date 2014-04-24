@@ -60,7 +60,7 @@ namespace QuickFix.Transport
             {
                 t.Connect();
                 t.Initiator.SetConnected(t.Session.SessionID);
-                log_.Info(t.Session.SessionID + " Connection succeeded for session ");
+                t.Session.NewLog.Info(t.Session.SessionID + " Connection succeeded for session ");
                 t.Session.Next();
                 while (t.Read())
                 { }
@@ -70,13 +70,13 @@ namespace QuickFix.Transport
             }
             catch (IOException ex) // Can be exception when connecting, during ssl authentication or when reading
             {
-                t.Session.Log.OnEvent("Connection failed: " + ex.Message);
+                t.Session.NewLog.Error("Connection failed for session " + t.Session.SessionID, ex);
                 t.Initiator.RemoveThread(t);
                 t.Initiator.SetDisconnected(t.Session.SessionID);
             }
             catch (SocketException e) 
             {
-                log_.Info(t.Session.SessionID + "Connection failed for session ");
+                t.Session.NewLog.Info("Connection failed for session", e);
                 t.Initiator.RemoveThread(t);
                 t.Initiator.SetDisconnected(t.Session.SessionID);
             }
@@ -190,7 +190,7 @@ namespace QuickFix.Transport
 
                 IPEndPoint socketEndPoint = GetNextSocketEndPoint(sessionID, settings);
                 SetPending(sessionID);
-                log_.InfoFormat("{0} Connecting to {1} on port {2}", session.SessionID, socketEndPoint.Address, socketEndPoint.Port);
+                session.NewLog.InfoFormat("{0} Connecting to {1} on port {2}", session.SessionID, socketEndPoint.Address, socketEndPoint.Port);
 
                 //Setup socket settings based on current section
                 socketSettings_.Configure(settings);
@@ -204,7 +204,7 @@ namespace QuickFix.Transport
             catch (System.Exception e)
             {
                 if (null != session)
-                    log_.Error("Error while connecting", e);
+                    session.NewLog.Error("Error while connecting", e);
             }
         }
 

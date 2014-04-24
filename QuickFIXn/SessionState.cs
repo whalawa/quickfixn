@@ -32,8 +32,8 @@ namespace QuickFix
         private ResendRange resendRange_ = new ResendRange();
         private Dictionary<int, Message> msgQueue = new Dictionary<int, Message>();
 
-        private readonly Common.Logging.ILog log_;
-        private ILog messageLog_;
+        private readonly ILog legacyLog_ ;
+        private readonly LogDispatcher log_;
 
         #endregion
 
@@ -48,8 +48,8 @@ namespace QuickFix
         public bool ShouldSendLogon
         { get { return IsInitiator && !SentLogon; } }
 
-        public ILog MessageLog
-        { get { return messageLog_; } }
+        public ILog Log
+        { get { return legacyLog_; } }
 
         #endregion
 
@@ -157,10 +157,12 @@ namespace QuickFix
 
         #endregion
 
-        public SessionState(SessionID sessID, ILog messageLog, int heartBtInt)
+        public SessionState(SessionID sessID, ILog legacyLog, int heartBtInt)
         {
-            log_ = LogManager.GetLogger(String.Format("QuickFix.Sessions.{0}.SessionState", sessID));
-            messageLog_ = messageLog;
+            legacyLog_ = legacyLog;
+            log_ =
+              new LogDispatcher(LogManager.GetLogger(String.Format("QuickFix.Sessions.{0}.State", sessID)), legacyLog);
+
             this.HeartBtInt = heartBtInt;
             this.IsInitiator = (0 != heartBtInt);
             lastReceivedTimeDT_ = DateTime.UtcNow;
@@ -414,7 +416,7 @@ namespace QuickFix
 
         public void Dispose()
         {
-            if (messageLog_ != null) { messageLog_.Dispose(); }
+            if (legacyLog_ != null) { legacyLog_.Dispose(); }
             if (MessageStore != null) { MessageStore.Dispose(); }
         }
     }
